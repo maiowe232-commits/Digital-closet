@@ -4,7 +4,7 @@ import uuid
 
 # بيانات مشروعك
 SUPABASE_URL = "https://uviowmpciysmuehljchv.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2aW93bXBjaXlzbXVlaGxqY2h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0NzE1NTcsImV4cCI6MjEwMjA0NzU1N30.Re-ViCrX58Sr8BspZu82breylTbrkDEN7NxXB9dHc6g"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2aW93bXBcilzbXVlaGxqY2h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0NzE1NTcsImV4cCI6MjEwMjA0NzU1N30.Re-ViCrX58Sr8BspZu82breylTbrkDEN7NxXB9dHc6g"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -14,37 +14,43 @@ st.title("👗 خزانتي الرقمية الشخصية")
 if "user" not in st.session_state:
     st.session_state.user = None
 
-# صفحة تسجيل الدخول أو حساب جديد
+# صفحة تسجيل الدخول أو إنشاء حساب بدون إزعاج الإيميلات
 if st.session_state.user is None:
     tab1, tab2 = st.tabs(["تسجيل الدخول", "حساب جديد"])
     
     with tab1:
-        email = st.text_input("البريد الإلكتروني", key="l_email")
-        password = st.text_input("كلمة المرور", type="password", key="l_pass")
+        email_l = st.text_input("البريد الإلكتروني", key="l_email")
+        pass_l = st.text_input("كلمة المرور", type="password", key="l_pass")
         if st.button("دخول"):
             try:
-                res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+                res = supabase.auth.sign_in_with_password({"email": email_l, "password": pass_l})
                 st.session_state.user = res.user
                 st.rerun()
             except:
-                st.error("تأكدي من الإيميل أو كلمة المرور")
+                st.error("تأكدي من البريد أو كلمة المرور")
 
     with tab2:
-        new_email = st.text_input("البريد الإلكتروني", key="r_email")
-        new_password = st.text_input("كلمة المرور", type="password", key="r_pass")
-        if st.button("إنشاء حساب"):
+        email_r = st.text_input("البريد الإلكتروني الجديد", key="r_email")
+        pass_r = st.text_input("كلمة المرور الجديدة", type="password", key="r_pass")
+        if st.button("إنشاء حساب والدخول فوراً"):
             try:
-                res = supabase.auth.sign_up({"email": new_email, "password": new_password})
-                # دخول تلقائي
-                st.session_state.user = res.user
-                st.success("تم إنشاء الحساب والدخول بنجاح!")
-                st.rerun()
+                # محاولة التسجيل العادي
+                res = supabase.auth.sign_up({"email": email_r, "password": pass_r})
+                if res.user:
+                    st.session_state.user = res.user
+                    st.success("تم إنشاء الحساب بنجاح!")
+                    st.rerun()
             except Exception as e:
-                st.error(f"حدث خطأ: {e}")
+                # إذا علق على الـ Rate limit، ندخلك مباشرة كحل طوارئ مؤقت بدون إرسال إيميل
+                try:
+                    res_in = supabase.auth.sign_in_with_password({"email": email_r, "password": pass_r})
+                    st.session_state.user = res_in.user
+                    st.rerun()
+                except:
+                    st.error("عذراً، جربي إيميل مختلف تماماً أو سجلي دخول مباشرة.")
 
-# واجهة الدولاب بعد تسجيل الدخول
 else:
-    st.write(f"أهلاً بكِ! ({st.session_state.user.email})")
+    st.write(f"أهلاً بكِ في خزانتك الرقمية!")
     
     if st.button("تسجيل خروج"):
         supabase.auth.sign_out()
@@ -81,7 +87,7 @@ else:
                 }).execute()
                 st.success("تمت إضافة القطعة بنجاح!")
             except Exception as e:
-                st.error(f"حدث خطأ: {e}")
+                st.error(f"حدث خطأ أثناء الحفظ: {e}")
 
     st.markdown("---")
     st.subheader("🧥 خزانتك الرقمية")

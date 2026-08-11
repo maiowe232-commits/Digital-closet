@@ -1,21 +1,14 @@
 import streamlit as st
-
-# أمر تلقائي يثبت مكتبة supabase لو مو موجودة
-try:
-    from supabase import create_client, Client
-except ImportError:
-    import subprocess
-    subprocess.run(["pip", "install", "supabase"])
-    from supabase import create_client, Client
-
+from supabase import create_client, Client
 import uuid
 
-# بيانات مشروعك اللي دمناها قبل شوي
+# بيانات مشروعك
 SUPABASE_URL = "https://uviowmpciysmuehljchv.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2aW93bXBjaXlzbXVlaGxqY2h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0NzE1NTcsImV4cCI6MjEwMjA0NzU1N30.Re-ViCrX58Sr8BspZu82breylTbrkDEN7NxXB9dHc6g"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+st.set_page_config(page_title="خزانتي الرقمية", layout="centered")
 st.title("👗 خزانتي الرقمية الشخصية")
 
 if "user" not in st.session_state:
@@ -32,10 +25,9 @@ if st.session_state.user is None:
             try:
                 res = supabase.auth.sign_in_with_password({"email": email, "password": password})
                 st.session_state.user = res.user
-                st.success("تم تسجيل الدخول بنجاح!")
                 st.rerun()
-            except Exception as e:
-                st.error(f"خطأ: تأكدي من الإيميل أو كلمة المرور")
+            except:
+                st.error("تأكدي من الإيميل أو كلمة المرور")
 
     with tab2:
         new_email = st.text_input("البريد الإلكتروني", key="r_email")
@@ -43,13 +35,16 @@ if st.session_state.user is None:
         if st.button("إنشاء حساب"):
             try:
                 res = supabase.auth.sign_up({"email": new_email, "password": new_password})
-                st.success("تم إنشاء الحساب بنجاح! سجلي دخولك الآن.")
+                # دخول تلقائي
+                st.session_state.user = res.user
+                st.success("تم إنشاء الحساب والدخول بنجاح!")
+                st.rerun()
             except Exception as e:
-                st.error(f"خطأ في التسجيل: {e}")
+                st.error(f"حدث خطأ: {e}")
 
 # واجهة الدولاب بعد تسجيل الدخول
 else:
-    st.write(f"مرحباً بكِ! ({st.session_state.user.email})")
+    st.write(f"أهلاً بكِ! ({st.session_state.user.email})")
     
     if st.button("تسجيل خروج"):
         supabase.auth.sign_out()
@@ -72,24 +67,18 @@ else:
             file_path = f"{user_id}/{uuid.uuid4()}.{file_extension}"
             
             try:
-                # رفع الصورة إلى Storage
                 supabase.storage.from_("wardrobe-images").upload(
                     file_path, 
                     uploaded_file.getvalue(), 
                     file_options={"content-type": f"image/{file_extension}"}
                 )
-                
-                # جلب الرابط
                 image_url = supabase.storage.from_("wardrobe-images").get_public_url(file_path)
-                
-                # حفظ البيانات في الجدول
                 supabase.table("wardrobe_items").insert({
                     "user_id": user_id,
                     "image_url": image_url,
                     "category": category,
                     "notes": notes
                 }).execute()
-                
                 st.success("تمت إضافة القطعة بنجاح!")
             except Exception as e:
                 st.error(f"حدث خطأ: {e}")

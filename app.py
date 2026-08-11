@@ -2,59 +2,31 @@ import streamlit as st
 from supabase import create_client, Client
 import uuid
 
-# بيانات مشروعك
 SUPABASE_URL = "https://uviowmpciysmuehljchv.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2aW93bXBcilzbXVlaGxqY2h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0NzE1NTcsImV4cCI6MjEwMjA0NzU1N30.Re-ViCrX58Sr8BspZu82breylTbrkDEN7NxXB9dHc6g"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2aW93bXBjaXlzbXVlaGxqY2h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0NzE1NTcsImV4cCI6MjEwMjA0NzU1N30.Re-ViCrX58Sr8BspZu82breylTbrkDEN7NxXB9dHc6g"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 st.set_page_config(page_title="خزانتي الرقمية", layout="centered")
 st.title("👗 خزانتي الرقمية الشخصية")
 
-if "user" not in st.session_state:
-    st.session_state.user = None
+if "username" not in st.session_state:
+    st.session_state.username = None
 
-# صفحة تسجيل الدخول أو إنشاء حساب بدون إزعاج الإيميلات
-if st.session_state.user is None:
-    tab1, tab2 = st.tabs(["تسجيل الدخول", "حساب جديد"])
-    
-    with tab1:
-        email_l = st.text_input("البريد الإلكتروني", key="l_email")
-        pass_l = st.text_input("كلمة المرور", type="password", key="l_pass")
-        if st.button("دخول"):
-            try:
-                res = supabase.auth.sign_in_with_password({"email": email_l, "password": pass_l})
-                st.session_state.user = res.user
-                st.rerun()
-            except:
-                st.error("تأكدي من البريد أو كلمة المرور")
-
-    with tab2:
-        email_r = st.text_input("البريد الإلكتروني الجديد", key="r_email")
-        pass_r = st.text_input("كلمة المرور الجديدة", type="password", key="r_pass")
-        if st.button("إنشاء حساب والدخول فوراً"):
-            try:
-                # محاولة التسجيل العادي
-                res = supabase.auth.sign_up({"email": email_r, "password": pass_r})
-                if res.user:
-                    st.session_state.user = res.user
-                    st.success("تم إنشاء الحساب بنجاح!")
-                    st.rerun()
-            except Exception as e:
-                # إذا علق على الـ Rate limit، ندخلك مباشرة كحل طوارئ مؤقت بدون إرسال إيميل
-                try:
-                    res_in = supabase.auth.sign_in_with_password({"email": email_r, "password": pass_r})
-                    st.session_state.user = res_in.user
-                    st.rerun()
-                except:
-                    st.error("عذراً، جربي إيميل مختلف تماماً أو سجلي دخول مباشرة.")
-
+if st.session_state.username is None:
+    st.info("أهلاً بكِ! ادخلي باسمك فقط لتبدئي في تنظيم خزانتك الرقمية:")
+    name_input = st.text_input("اسم المستخدم أو لقبك")
+    if st.button("دخول للخزانة"):
+        if name_input.strip():
+            st.session_state.username = name_input.strip()
+            st.rerun()
+        else:
+            st.warning("الرجاء إدخال اسم صحيح.")
 else:
-    st.write(f"أهلاً بكِ في خزانتك الرقمية!")
+    st.write(f"أهلاً بكِ، **{st.session_state.username}**! ✨")
     
-    if st.button("تسجيل خروج"):
-        supabase.auth.sign_out()
-        st.session_state.user = None
+    if st.button("تسجيل خروج / تغيير الاسم"):
+        st.session_state.username = None
         st.rerun()
 
     st.markdown("---")
@@ -68,9 +40,8 @@ else:
         submitted = st.form_submit_button("حفظ القطعة")
         
         if submitted and uploaded_file is not None:
-            user_id = st.session_state.user.id
             file_extension = uploaded_file.name.split(".")[-1]
-            file_path = f"{user_id}/{uuid.uuid4()}.{file_extension}"
+            file_path = f"{st.session_state.username}/{uuid.uuid4()}.{file_extension}"
             
             try:
                 supabase.storage.from_("wardrobe-images").upload(
@@ -80,7 +51,7 @@ else:
                 )
                 image_url = supabase.storage.from_("wardrobe-images").get_public_url(file_path)
                 supabase.table("wardrobe_items").insert({
-                    "user_id": user_id,
+                    "user_id": st.session_state.username,
                     "image_url": image_url,
                     "category": category,
                     "notes": notes
@@ -93,7 +64,7 @@ else:
     st.subheader("🧥 خزانتك الرقمية")
 
     try:
-        response = supabase.table("wardrobe_items").select("*").eq("user_id", st.session_state.user.id).execute()
+        response = supabase.table("wardrobe_items").select("*").eq("user_id", st.session_state.username).execute()
         items = response.data
         
         if not items:

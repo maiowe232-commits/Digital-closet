@@ -1,8 +1,16 @@
 import streamlit as st
-from supabase import create_client, Client
+
+# أمر تلقائي يثبت مكتبة supabase لو مو موجودة
+try:
+    from supabase import create_client, Client
+except ImportError:
+    import subprocess
+    subprocess.run(["pip", "install", "supabase"])
+    from supabase import create_client, Client
+
 import uuid
 
-# تم دمج بيانات مشروعك ورابطك هنا بكل امن
+# بيانات مشروعك اللي دمناها قبل شوي
 SUPABASE_URL = "https://uviowmpciysmuehljchv.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV2aW93bXBjaXlzbXVlaGxqY2h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0NzE1NTcsImV4cCI6MjEwMjA0NzU1N30.Re-ViCrX58Sr8BspZu82breylTbrkDEN7NxXB9dHc6g"
 
